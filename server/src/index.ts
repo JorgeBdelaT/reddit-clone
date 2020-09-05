@@ -6,13 +6,13 @@ import { buildSchema } from 'type-graphql';
 import redis from 'redis';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
+import cors from 'cors';
 
 import mikroConfig from './mikro-orm.config';
 import { PORT, REDIS_SECRET, PRODUCTION } from './constants';
 import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
-import { MyContext } from './types';
 
 const main = async () => {
   try {
@@ -22,6 +22,13 @@ const main = async () => {
 
     // App initialization
     const app = express();
+
+    app.use(
+      cors({
+        origin: 'http://localhost:3000',
+        credentials: true,
+      })
+    );
 
     const RedisStore = connectRedis(session);
     const redisClient = redis.createClient();
@@ -52,10 +59,13 @@ const main = async () => {
         validate: false,
         resolvers: [HelloResolver, PostResolver, UserResolver],
       }),
-      context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
+      context: ({ req, res }) => ({ em: orm.em, req, res }),
     });
 
-    apolloServer.applyMiddleware({ app });
+    apolloServer.applyMiddleware({
+      app,
+      cors: false,
+    });
 
     app.listen(PORT, () => {
       console.log(`app running on port ${PORT}`);
